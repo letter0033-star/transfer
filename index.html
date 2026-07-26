@@ -161,15 +161,45 @@
     /* 계산 유틸                                                             */
     /* ------------------------------------------------------------------ */
     function computeYearsMonths(startStr, endStr) {
-      if (!startStr || !endStr) return { years: 0, months: 0 };
+      if (!startStr || !endStr) return { years: 0, months: 0, totalDays: 0 };
       const s = new Date(startStr + "T00:00:00");
       const e = new Date(endStr + "T00:00:00");
-      if (isNaN(s) || isNaN(e) || e < s) return { years: 0, months: 0 };
+      if (isNaN(s) || isNaN(e) || e < s) return { years: 0, months: 0, totalDays: 0 };
       const totalDays = Math.round((e - s) / 86400000) + 1;
       const years = Math.floor(totalDays / 365);
       const remainderDays = totalDays - years * 365;
       const months = Math.floor(remainderDays / 30); // 잔여일 30일 이상만 1월 인정
-      return { years, months };
+      return { years, months, totalDays };
+    }
+
+    function daysToYearsMonths(days) {
+      if (days <= 0) return { years: 0, months: 0, totalDays: 0 };
+      const years = Math.floor(days / 365);
+      const remainderDays = days - years * 365;
+      const months = Math.floor(remainderDays / 30);
+      return { years, months, totalDays: days };
+    }
+
+    function getOverlapDays(cStartStr, cEndStr, dispatches) {
+      if (!cStartStr || !cEndStr) return 0;
+      const cs = new Date(cStartStr + "T00:00:00");
+      const ce = new Date(cEndStr + "T00:00:00");
+      if (isNaN(cs) || isNaN(ce) || ce < cs) return 0;
+
+      let overlapDays = 0;
+      for (const d of dispatches) {
+        if (!d.start || !d.end) continue;
+        const ds = new Date(d.start + "T00:00:00");
+        const de = new Date(d.end + "T00:00:00");
+        if (isNaN(ds) || isNaN(de) || de < ds) continue;
+
+        const os = new Date(Math.max(cs, ds));
+        const oe = new Date(Math.min(ce, de));
+        if (os <= oe) {
+          overlapDays += Math.round((oe - os) / 86400000) + 1;
+        }
+      }
+      return overlapDays;
     }
 
     function floor3(n) {
@@ -192,7 +222,7 @@
     /* 초기 상태                                                             */
     /* ------------------------------------------------------------------ */
     const initialState = {
-      schoolYear: 2026,
+      schoolYear: 2027,
       teacherType: "초등교사",
       applicant: {
         schoolName: "",
@@ -229,6 +259,67 @@
       dispatches: [],
       bonuses: [],
       confirmation: { date: "", reviewer: "", principal: "" },
+    };
+
+    const SAMPLE_DATA = {
+      schoolYear: "2027",
+      teacherType: "초등교사",
+      applicant: {
+        schoolName: "한빛",
+        name: "김나라",
+        gender: "남",
+        birthDate: "761101",
+        salaryStep: "32",
+        totalCareerYears: "20.00",
+        currentCountyYears: "10",
+        currentSchoolYears: "4.00"
+      },
+      districtExpired: true,
+      prefs: {
+        p1: { county: "동해", school1: "동해초", school2: "중앙초" },
+        p2: { county: "삼척" },
+        p3: { county: "양양" },
+        p4: { county: "평창" }
+      },
+      flags: {
+        livingBase: "강릉",
+        nationalSchoolWish: true,
+        invitedTeacherApply: false,
+        otherProvinceApply: true,
+        englishTraining: false,
+        specialProvision: false,
+        specialDetail: "",
+        deferralProvision: false,
+        deferralDetail: ""
+      },
+      transferReason: "도지침 4-1)-① (지구만기)",
+      transferReasonCustom: "",
+      family: [
+        { id: "68b78911-b1a5-43a7-a2ac-d881f4c0538c", affiliation: "동해 바다초", position: "교사", name: "이사랑" }
+      ],
+      careers: [
+        { id: "e344cb63-3820-4924-8df1-83aac43d7ba9", schoolName: "한빛초등학교", start: "2023-03-01", end: "2027-02-28", district: "1지구", zone: "일반지(읍면)" },
+        { id: "ce09c50e-46d1-4e7f-83d2-5894c1c4f729", schoolName: "두빛초등학교", start: "2021-03-01", end: "2023-02-28", district: "1지구", zone: "일반지(시동)" }
+      ],
+      dispatches: [
+        { id: "c424ecfd-8565-42be-8c33-5a4124534c17", type: "휴직(육아)", org: "두빛초등학교", start: "2022-03-01", end: "2023-02-28" }
+      ],
+      bonuses: [
+        { id: "b6c61363-13fa-4cdc-bfe6-3959cc443e3b", date: "2024-10-15", type: "연구실적 전국 1등급", score: 1, inputMode: "single", start: "", end: "", annualScore: 1 },
+        { id: "ff89aa5c-4e79-4623-b033-ec84d28e51b3", date: "", type: "연구학교", score: 0, inputMode: "period", start: "2023-03-01", end: "2024-02-28", annualScore: "0.375" },
+        { id: "ae30a042-5e25-469b-b538-77fe324120e0", date: "2021-06-06", type: "국가유공자", score: "1.5", inputMode: "single", start: "", end: "", annualScore: 0 },
+        { id: "a2f4c70a-7b69-46b3-9042-7e7eacde02a4", date: "", type: "장기근속", score: 0, inputMode: "period", start: "2016-03-01", end: "2021-02-28", annualScore: "0.5" },
+        { id: "9a2680b1-c25b-4f8c-ab14-afc85f9f63e6", date: "", type: "복식학급담임교사", score: 0, inputMode: "period", start: "2021-03-01", end: "2022-02-28", annualScore: "0.5" },
+        { id: "91395f1c-f61d-418d-9e28-49699e8884d4", date: "", type: "영재교육원지도교사", score: 0, inputMode: "period", start: "2022-03-01", end: "2019-02-28", annualScore: "0.25" },
+        { id: "8b6e3c38-2d8d-4285-af62-3595b91023d5", date: "", type: "체육지도교사", score: 0, inputMode: "period", start: "2023-03-01", end: "2024-02-29", annualScore: "0.5" },
+        { id: "834800c1-45b2-481d-b5ba-1b050ae83341", date: "2020-02-11", type: "불문경고", score: "-1", inputMode: "single", start: "", end: "", annualScore: 0 },
+        { id: "86080049-130c-47d7-96fb-d440b9fd8317", date: "2017-11-22", type: "견책", score: "-2", inputMode: "single", start: "", end: "", annualScore: 0 }
+      ],
+      confirmation: {
+        date: "2026-12-10",
+        reviewer: "김나라",
+        principal: "김교장"
+      }
     };
 
     /* ------------------------------------------------------------------ */
@@ -358,11 +449,14 @@
             const zoneData = DISTRICT_ZONES[c.district]?.find((z) => z.code === c.zone);
             const annual = zoneData?.annual || 0;
             const monthly = zoneData?.monthly || 0;
-            const { years, months } = computeYearsMonths(c.start, c.end);
+            const raw = computeYearsMonths(c.start, c.end);
+            const overlapDays = getOverlapDays(c.start, c.end, state.dispatches);
+            const netDays = Math.max(0, raw.totalDays - overlapDays);
+            const { years, months } = daysToYearsMonths(netDays);
             const score = floor3(years * annual + months * monthly);
             return { ...c, years, months, annual, score };
           }),
-        [state.careers]
+        [state.careers, state.dispatches]
       );
       const careerSubtotal = floor3(careerRows.reduce((sum, c) => sum + c.score, 0));
 
@@ -398,7 +492,7 @@
       // 서식 실제 레이아웃: 연월일/종별/평정점 2열 배치 후 소계를 오른쪽에 rowSpan으로 병합
       const bonusItems = useMemo(
         () => [
-          { id: "salary", date: `${state.schoolYear}.01.01.`, type: `호봉(${state.applicant.salaryStep || ""})`, score: salaryBonus },
+          { id: "salary", date: `${state.schoolYear || 2027}.01.01.`, type: `호봉(${state.applicant.salaryStep || ""})`, score: salaryBonus },
           ...computedBonuses.map((b) => {
             if (b.inputMode === "period") {
               return {
@@ -421,6 +515,12 @@
       const bonusRowCount = Math.max(3, Math.ceil(bonusItems.length / 2));
 
       /* ---- 액션 ---- */
+      const loadSampleData = () => {
+        if (confirm("샘플 데이터(전보희망원_김나라_2027)를 불러오시겠습니까? 현재 입력된 내용은 대체됩니다.")) {
+          setState({ ...initialState, ...SAMPLE_DATA });
+        }
+      };
+
       const resetAll = () => {
         if (confirm("모든 입력 내용을 초기화할까요? 되돌릴 수 없습니다.")) {
           setState(initialState);
@@ -1401,20 +1501,20 @@
                   </tbody>
                 </table>
 
-                <div style={{ textAlign: "center", marginTop: "12px", fontSize: "13.5px", lineHeight: "1.4" }}>
+                <div style={{ textAlign: "center", marginTop: "12px", fontSize: "15.5px", lineHeight: "1.4" }}>
                   위 기재 내용과 평정점이 틀림없음을 확인하였으며, 위와 같이 전보를 희망하였기에 내신합니다.
                 </div>
 
-                <div style={{ textAlign: "center", margin: "10px 0 8px", fontSize: "15px", fontWeight: "bold", letterSpacing: "2px" }}>
+                <div style={{ textAlign: "center", margin: "10px 0 8px", fontSize: "17px", fontWeight: "bold", letterSpacing: "2px" }}>
                   {state.confirmation.date ? (
                     (() => {
                       const d = new Date(state.confirmation.date);
                       return isNaN(d)
-                        ? "2026 년     월     일"
+                        ? `${state.schoolYear || 2027} 년     월     일`
                         : `${d.getFullYear()} 년   ${String(d.getMonth() + 1).padStart(2, "0")} 월   ${String(d.getDate()).padStart(2, "0")} 일`;
                     })()
                   ) : (
-                    "2026 년     월     일"
+                    `${state.schoolYear || 2027} 년     월     일`
                   )}
                 </div>
 
@@ -1423,9 +1523,9 @@
                   <table style={{ width: "192px", borderCollapse: "collapse", margin: "0", border: "2px solid #14213b" }}>
                     <tbody>
                       <tr>
-                        <th rowSpan={2} style={{ width: "43px", border: "1px solid #8b93a6", fontSize: "12px", padding: "2px", backgroundColor: "#eef1f6" }}>확<br />인</th>
-                        <th style={{ width: "74px", border: "1px solid #8b93a6", fontSize: "12px", padding: "2px", height: "22px", backgroundColor: "#eef1f6" }}>교감</th>
-                        <th style={{ width: "74px", border: "1px solid #8b93a6", fontSize: "12px", padding: "2px", backgroundColor: "#eef1f6" }}>장학사</th>
+                        <th rowSpan={2} style={{ width: "43px", border: "1px solid #8b93a6", fontSize: "14px", padding: "2px", backgroundColor: "#eef1f6" }}>확<br />인</th>
+                        <th style={{ width: "74px", border: "1px solid #8b93a6", fontSize: "14px", padding: "2px", height: "22px", backgroundColor: "#eef1f6" }}>교감</th>
+                        <th style={{ width: "74px", border: "1px solid #8b93a6", fontSize: "14px", padding: "2px", backgroundColor: "#eef1f6" }}>장학사</th>
                       </tr>
                       <tr>
                         <td style={{ border: "1px solid #8b93a6", height: "60px" }}></td>
@@ -1433,20 +1533,20 @@
                       </tr>
                     </tbody>
                   </table>
-                  <div style={{ fontSize: "14px", marginRight: "60px", paddingBottom: "4px" }}>
-                    위원인 <span className="tp-val" style={{ marginLeft: "40px", borderBottom: "1px solid #999", paddingRight: "30px" }}>{state.applicant.name || ""}</span> (서명 또는 인)
+                  <div style={{ fontSize: "16px", marginRight: "60px", paddingBottom: "4px" }}>
+                    위원인 <span className="tp-val" style={{ display: "inline-block", width: "120px", textAlign: "center" }}>{state.applicant.name || ""}</span> (서명 또는 인)
                   </div>
                 </div>
 
                 {/* 학교장 직인 란 */}
-                <div style={{ textAlign: "center", margin: "18px 0 10px", fontSize: "16px", fontWeight: "bold" }}>
-                  <span className="tp-val" style={{ marginRight: "4px" }}>{state.applicant.schoolName || "○○"}</span>{state.teacherType === "유치원교사" ? "유치원장" : "초등학교장"}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;성명&nbsp;&nbsp;
-                  <span className="tp-val" style={{ borderBottom: "1px solid #999", paddingRight: "30px" }}>{state.confirmation.principal || "○○○"}</span>&nbsp;&nbsp;직인<span style={{ marginLeft: "1.5cm" }}>(사인)</span>
+                <div style={{ textAlign: "center", margin: "18px 0 10px", fontSize: "18px", fontWeight: "bold" }}>
+                  <span className="tp-val" style={{ marginRight: "4px" }}>{state.applicant.schoolName || "○○"}</span>{state.teacherType === "유치원교사" ? "유치원장" : "초등학교장"}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;성명
+                  <span className="tp-val" style={{ display: "inline-block", width: "120px", textAlign: "center" }}>{state.confirmation.principal || "○○○"}</span>직인<span style={{ marginLeft: "1.5cm" }}>(사인)</span>
                 </div>
 
                 {/* 교육감 귀하 */}
                 <div style={{ textAlign: "left", marginTop: "20px" }}>
-                  <div style={{ fontSize: "19px", fontWeight: "800", letterSpacing: "1px", fontFamily: "Pretendard, sans-serif" }}>
+                  <div style={{ fontSize: "21px", fontWeight: "bold", letterSpacing: "1px" }}>
                     강원특별자치도교육감 귀하
                   </div>
                 </div>
@@ -1469,6 +1569,9 @@
               {missingRequired && <span className="tp-warn">필수 항목을 확인해 주세요</span>}
             </div>
             <div className="tp-toolbar-btns">
+              <button className="tp-btn" onClick={loadSampleData}>
+                <Upload size={14} /> 샘플 불러오기
+              </button>
               <button className="tp-btn" onClick={resetAll}>
                 <RotateCcw size={14} /> 초기화
               </button>
