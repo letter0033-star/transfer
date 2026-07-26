@@ -202,6 +202,29 @@
       return overlapDays;
     }
 
+    function formatSchoolTitle(schoolName, teacherType) {
+      const raw = (schoolName || "").trim();
+      if (!raw) return teacherType === "유치원교사" ? "○○유치원장" : "○○초등학교장";
+
+      if (teacherType === "유치원교사") {
+        if (raw.endsWith("유치원")) {
+          return raw + "장";
+        }
+        if (raw.endsWith("유")) {
+          return raw.slice(0, -1) + "유치원장";
+        }
+        return raw + "유치원장";
+      } else {
+        if (raw.endsWith("초등학교")) {
+          return raw + "장";
+        }
+        if (raw.endsWith("초")) {
+          return raw.slice(0, -1) + "초등학교장";
+        }
+        return raw + "초등학교장";
+      }
+    }
+
     function floor3(n) {
       const val = Number(n);
       if (!Number.isFinite(val)) return 0;
@@ -265,7 +288,7 @@
       schoolYear: "2027",
       teacherType: "초등교사",
       applicant: {
-        schoolName: "한빛",
+        schoolName: "한빛초",
         name: "김나라",
         gender: "남",
         birthDate: "761101",
@@ -1540,7 +1563,7 @@
 
                 {/* 학교장 직인 란 */}
                 <div style={{ textAlign: "center", margin: "18px 0 10px", fontSize: "18px", fontWeight: "bold" }}>
-                  <span className="tp-val" style={{ marginRight: "4px" }}>{state.applicant.schoolName || "○○"}</span>{state.teacherType === "유치원교사" ? "유치원장" : "초등학교장"}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;성명
+                  <span className="tp-val">{formatSchoolTitle(state.applicant.schoolName, state.teacherType)}</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;성명
                   <span className="tp-val" style={{ display: "inline-block", width: "120px", textAlign: "center" }}>{state.confirmation.principal || "○○○"}</span>직인<span style={{ marginLeft: "1.5cm" }}>(사인)</span>
                 </div>
 
