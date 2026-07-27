@@ -368,15 +368,14 @@
         { id: "c424ecfd-8565-42be-8c33-5a4124534c17", type: "휴직(육아)", org: "두빛초등학교", start: "2022-03-01", end: "2023-02-28" }
       ],
       bonuses: [
-        { id: "b6c61363-13fa-4cdc-bfe6-3959cc443e3b", date: "2021-06-16", type: "연구점수 전국1등급", score: 1, inputMode: "single", start: "", end: "", annualScore: 1 },
-        { id: "ff89aa5c-4e79-4623-b033-ec84d28e51b3", date: "", type: "연구학교", score: 0, inputMode: "period", start: "2021-09-01", end: "2022-02-28", annualScore: "0.375" },
-        { id: "ae30a042-5e25-469b-b538-77fe324120e0", date: "2010-03-01", type: "국가유공자", score: "1.5", inputMode: "single", start: "", end: "", annualScore: 0 },
-        { id: "a2f4c70a-7b69-46b3-9042-7e7eacde02a4", date: "", type: "장기근속", score: 0, inputMode: "period", start: "2016-03-01", end: "2021-02-28", annualScore: "0.5" },
-        { id: "9a2680b1-c25b-4f8c-ab14-afc85f9f63e6", date: "", type: "부장교사", score: 0, inputMode: "period", start: "2023-03-01", end: "2024-02-29", annualScore: "0.5" },
-        { id: "91395f1c-f61d-418d-9e28-49699e8884d4", date: "", type: "영재교육원지도교사", score: 0, inputMode: "period", start: "2024-03-01", end: "2025-02-28", annualScore: "0.25" },
-        { id: "8b6e3c38-2d8d-4285-af62-3595b91023d5", date: "", type: "체육지도교사", score: 0, inputMode: "period", start: "2026-03-01", end: "2027-02-28", annualScore: "0.5" },
-        { id: "834800c1-45b2-481d-b5ba-1b050ae83341", date: "2020-02-11", type: "불문경고", score: "-1", inputMode: "single", start: "", end: "", annualScore: 0 },
-        { id: "86080049-130c-47d7-96fb-d440b9fd8317", date: "2017-11-22", type: "견책", score: "-2", inputMode: "single", start: "", end: "", annualScore: 0 }
+        { id: "45f36370-e017-48ed-a30c-ef4290a52754", date: "2015-05-15", type: "장관표창", score: 1, inputMode: "single", start: "", end: "", annualScore: 1, isModelCivilServant: false },
+        { id: "826be511-c9bf-414d-8143-3ca110533437", date: "", type: "장기 근속", score: 0, inputMode: "period", start: "2016-03-01", end: "2021-02-28", annualScore: "0.5", isModelCivilServant: false },
+        { id: "e787e3f1-0372-4cd9-9575-180d5e679256", date: "2021-06-18", type: "연구점수 전국2등급", score: 0.75, inputMode: "single", start: "", end: "", annualScore: 0.75, isModelCivilServant: false },
+        { id: "4677e1f5-5f6b-49d1-8a5e-cfb47e40c53e", date: "", type: "연구학교", score: 0.375, inputMode: "period", start: "2023-03-01", end: "2024-02-29", annualScore: 0.375, isModelCivilServant: false },
+        { id: "8004092e-3ac8-4835-b585-19a05657faef", date: "", type: "부장교사", score: 0, inputMode: "period", start: "2024-03-01", end: "2025-02-28", annualScore: "0.5", isModelCivilServant: false },
+        { id: "8f6a190a-c7ee-4e9c-b394-784e5ebf27b2", date: "", type: "영재교육원 지도교사", score: 0, inputMode: "period", start: "2025-03-01", end: "2026-02-28", annualScore: "0.25", isModelCivilServant: false },
+        { id: "36a67846-3576-454c-bad1-00969bdbf73b", date: "", type: "교과전담교사", score: 0, inputMode: "period", start: "2026-03-01", end: "2027-02-28", annualScore: "0.5", isModelCivilServant: false },
+        { id: "63ac47f2-1131-455e-bd19-1ebdf665f452", date: "2023-01-30", type: "불문경고", score: "-1", inputMode: "single", start: "", end: "", annualScore: 0, isModelCivilServant: false }
       ],
       confirmation: {
         date: "2026-12-10",
@@ -595,40 +594,40 @@
             if (b.inputMode === "period") {
               const diff = getCalendarDiff(b.start, b.end);
               const totalMonths = diff.years * 12 + diff.months + Math.floor(diff.days / 30);
-              let score = floor3((Number(b.annualScore || 0) * totalMonths) / 12);
+              let parsedScore = floor3((Number(b.annualScore || 0) * totalMonths) / 12);
               if (isResSchool) {
-                score = Math.min(1.0, score);
+                parsedScore = Math.min(1.0, parsedScore);
               }
               const years = Math.floor(totalMonths / 12);
               const months = totalMonths % 12;
-              return { ...b, score, years, months };
+              return { ...b, parsedScore, years, months };
             }
-            let score = Number(b.score) || 0;
+            let parsedScore = Number(b.score) || 0;
             if (isResSchool) {
-              score = Math.min(1.0, score);
+              parsedScore = Math.min(1.0, parsedScore);
             }
-            return { ...b, score };
+            return { ...b, parsedScore };
           }),
         [state.bonuses]
       );
-
+ 
       const bonusSubtotal = floor3(
         (() => {
           const researchSchoolSum = computedBonuses
             .filter(b => b.type && b.type.includes("연구학교"))
-            .reduce((sum, b) => sum + (Number(b.score) || 0), 0);
+            .reduce((sum, b) => sum + (Number(b.parsedScore) || 0), 0);
           const researchSchoolCapped = Math.min(1.0, researchSchoolSum);
-
+ 
           const otherBonusesSum = computedBonuses
             .filter(b => !b.type || !b.type.includes("연구학교"))
-            .reduce((sum, b) => sum + (Number(b.score) || 0), 0);
-
+            .reduce((sum, b) => sum + (Number(b.parsedScore) || 0), 0);
+ 
           return otherBonusesSum + researchSchoolCapped + salaryBonus;
         })()
       );
-
+ 
       const totalScore = floor3(careerSubtotal + bonusSubtotal);
-
+ 
       // 서식 실제 레이아웃: 연월일/종별/평정점 2열 배치 후 소계를 오른쪽에 rowSpan으로 병합
       const bonusItems = useMemo(
         () => [
@@ -636,18 +635,19 @@
           ...computedBonuses.map((b) => {
             const displayType = b.isModelCivilServant ? `${b.type}(모범공무원)` : b.type;
             if (b.inputMode === "period") {
+              const periodStr = b.years > 0 ? (b.months > 0 ? `${b.years}년 ${b.months}월` : `${b.years}년`) : `${b.months}월`;
               return {
                 id: b.id,
                 date: b.start && b.end ? `${b.start.replace(/-/g, ".")}~${b.end.replace(/-/g, ".")}` : "-",
-                type: b.start && b.end ? `${displayType || "-"} (${b.years}년 ${b.months}월)` : displayType || "-",
-                score: b.score,
+                type: b.start && b.end ? `${displayType || "-"} (${periodStr})` : displayType || "-",
+                score: b.parsedScore,
               };
             }
             return {
               id: b.id,
               date: b.date || "-",
               type: displayType || "-",
-              score: b.score,
+              score: b.parsedScore,
             };
           }),
         ],
@@ -1341,7 +1341,7 @@
                               />
                             </Field>
                             <Field label="자동 계산 평정점">
-                              <input type="text" disabled value={fmt(b.score)} />
+                              <input type="text" disabled value={fmt(b.parsedScore)} />
                             </Field>
                           </div>
                         </>
