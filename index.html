@@ -126,25 +126,33 @@
     };
 
     const REASON_PRESETS = [
-      "도지침 4-1)-① (지구만기)",
-      "도지침 4-1)-③ (일반희망)",
+      "도지침 4-1)-①",
+      "도지침 4-1)-③",
       "직접 입력",
+    ];
+
+    const RESEARCH_TYPES = [
+      { label: "연구점수 전국1등급", score: 1.0 },
+      { label: "연구점수 전국2등급", score: 0.75 },
+      { label: "연구점수 전국3등급", score: 0.5 },
+      { label: "연구점수 도1등급", score: 0.5 },
+      { label: "연구점수 도2등급", score: 0.375 },
+      { label: "연구점수 도3등급", score: 0.25 },
+      { label: "박사(직무관련)", score: 2.0 },
+      { label: "석사(직무관련)", score: 1.0 },
+      { label: "박사(기타)", score: 1.0 },
+      { label: "석사(기타)", score: 0.5 },
     ];
 
     const BONUS_PRESETS = [
       { label: "훈·포장", score: 2.5 },
       { label: "대통령표창", score: 2.0 },
-      { label: "국무총리표창(모범공무원)", score: 1.5 },
+      { label: "국무총리표창", score: 1.5 },
       { label: "장관표창", score: 1.0 },
-      { label: "교육감표창(모범공무원)", score: 0.75 },
+      { label: "교육감표창", score: 0.75 },
       { label: "교육장표창", score: 0.5 },
-      { label: "연구실적 전국 1등급", score: 1.0 },
-      { label: "연구실적 전국 2등급", score: 0.75 },
-      { label: "연구실적 전국 3등급", score: 0.5 },
-      { label: "연구실적 도 1등급", score: 0.5 },
-      { label: "박사(직무관련)", score: 2.0 },
-      { label: "석사(직무관련)", score: 1.0 },
-      { label: "도지정연구학교", score: 0.75 },
+      { label: "연구실적", score: 1.0 },
+      { label: "연구학교", score: 0.375 },
       { label: "장기근속(3·4지구, 년 0.5점)", score: 0.5 },
       { label: "복식학급담임(년 0.5점)", score: 0.5 },
       { label: "교과전담/부장교사(년 0.5점)", score: 0.5 },
@@ -160,46 +168,78 @@
     /* ------------------------------------------------------------------ */
     /* 계산 유틸                                                             */
     /* ------------------------------------------------------------------ */
-    function computeYearsMonths(startStr, endStr) {
-      if (!startStr || !endStr) return { years: 0, months: 0, totalDays: 0 };
+    function getCalendarDiff(startStr, endStr) {
+      if (!startStr || !endStr) return { years: 0, months: 0, days: 0 };
       const s = new Date(startStr + "T00:00:00");
       const e = new Date(endStr + "T00:00:00");
-      if (isNaN(s) || isNaN(e) || e < s) return { years: 0, months: 0, totalDays: 0 };
-      const totalDays = Math.round((e - s) / 86400000) + 1;
-      const years = Math.floor(totalDays / 365);
-      const remainderDays = totalDays - years * 365;
-      const months = Math.floor(remainderDays / 30); // 잔여일 30일 이상만 1월 인정
-      return { years, months, totalDays };
+      if (isNaN(s) || isNaN(e) || e < s) return { years: 0, months: 0, days: 0 };
+      
+      // 역에 의해 기간 계산 시 마지막 일까지 포함하므로 1일을 더함
+      const eObj = new Date(e.getTime() + 86400000);
+      
+      let y = eObj.getFullYear() - s.getFullYear();
+      let m = eObj.getMonth() - s.getMonth();
+      let d = eObj.getDate() - s.getDate();
+      
+      if (d < 0) {
+        m -= 1;
+        const prevMonth = new Date(eObj.getFullYear(), eObj.getMonth(), 0);
+        d += prevMonth.getDate();
+      }
+      if (m < 0) {
+        y -= 1;
+        m += 12;
+      }
+      return { years: y, months: m, days: d };
     }
 
-    function daysToYearsMonths(days) {
-      if (days <= 0) return { years: 0, months: 0, totalDays: 0 };
-      const years = Math.floor(days / 365);
-      const remainderDays = days - years * 365;
-      const months = Math.floor(remainderDays / 30);
-      return { years, months, totalDays: days };
-    }
+    function getNetCalendarPeriod(cStartStr, cEndStr, dispatches) {
+      if (!cStartStr || !cEndStr) return { years: 0, months: 0, days: 0 };
+      const careerDiff = getCalendarDiff(cStartStr, cEndStr);
+      if (careerDiff.years === 0 && careerDiff.months === 0 && careerDiff.days === 0) {
+        return careerDiff;
+      }
 
-    function getOverlapDays(cStartStr, cEndStr, dispatches) {
-      if (!cStartStr || !cEndStr) return 0;
-      const cs = new Date(cStartStr + "T00:00:00");
-      const ce = new Date(cEndStr + "T00:00:00");
-      if (isNaN(cs) || isNaN(ce) || ce < cs) return 0;
+      let overlapY = 0;
+      let overlapM = 0;
+      let overlapD = 0;
 
-      let overlapDays = 0;
       for (const d of dispatches) {
         if (!d.start || !d.end) continue;
+        const cs = new Date(cStartStr + "T00:00:00");
+        const ce = new Date(cEndStr + "T00:00:00");
         const ds = new Date(d.start + "T00:00:00");
         const de = new Date(d.end + "T00:00:00");
-        if (isNaN(ds) || isNaN(de) || de < ds) continue;
 
         const os = new Date(Math.max(cs, ds));
         const oe = new Date(Math.min(ce, de));
         if (os <= oe) {
-          overlapDays += Math.round((oe - os) / 86400000) + 1;
+          const osStr = os.toISOString().split('T')[0];
+          const oeStr = oe.toISOString().split('T')[0];
+          const diff = getCalendarDiff(osStr, oeStr);
+          overlapY += diff.years;
+          overlapM += diff.months;
+          overlapD += diff.days;
         }
       }
-      return overlapDays;
+
+      let netY = careerDiff.years - overlapY;
+      let netM = careerDiff.months - overlapM;
+      let netD = careerDiff.days - overlapD;
+
+      // 30일 = 1월 환산 및 마이너스 일수 보정
+      while (netD < 0) {
+        netM -= 1;
+        netD += 30;
+      }
+      while (netM < 0) {
+        netY -= 1;
+        netM += 12;
+      }
+      if (netY < 0) {
+        return { years: 0, months: 0, days: 0 };
+      }
+      return { years: netY, months: netM, days: netD };
     }
 
     function formatSchoolTitle(schoolName, teacherType) {
@@ -315,7 +355,7 @@
         deferralProvision: false,
         deferralDetail: ""
       },
-      transferReason: "도지침 4-1)-① (지구만기)",
+      transferReason: "도지침 4-1)-①",
       transferReasonCustom: "",
       family: [
         { id: "68b78911-b1a5-43a7-a2ac-d881f4c0538c", affiliation: "동해 바다초", position: "교사", name: "이사랑" }
@@ -328,13 +368,13 @@
         { id: "c424ecfd-8565-42be-8c33-5a4124534c17", type: "휴직(육아)", org: "두빛초등학교", start: "2022-03-01", end: "2023-02-28" }
       ],
       bonuses: [
-        { id: "b6c61363-13fa-4cdc-bfe6-3959cc443e3b", date: "2024-10-15", type: "연구실적 전국 1등급", score: 1, inputMode: "single", start: "", end: "", annualScore: 1 },
-        { id: "ff89aa5c-4e79-4623-b033-ec84d28e51b3", date: "", type: "연구학교", score: 0, inputMode: "period", start: "2023-03-01", end: "2024-02-28", annualScore: "0.375" },
-        { id: "ae30a042-5e25-469b-b538-77fe324120e0", date: "2021-06-06", type: "국가유공자", score: "1.5", inputMode: "single", start: "", end: "", annualScore: 0 },
+        { id: "b6c61363-13fa-4cdc-bfe6-3959cc443e3b", date: "2021-06-16", type: "연구점수 전국1등급", score: 1, inputMode: "single", start: "", end: "", annualScore: 1 },
+        { id: "ff89aa5c-4e79-4623-b033-ec84d28e51b3", date: "", type: "연구학교", score: 0, inputMode: "period", start: "2021-09-01", end: "2022-02-28", annualScore: "0.375" },
+        { id: "ae30a042-5e25-469b-b538-77fe324120e0", date: "2010-03-01", type: "국가유공자", score: "1.5", inputMode: "single", start: "", end: "", annualScore: 0 },
         { id: "a2f4c70a-7b69-46b3-9042-7e7eacde02a4", date: "", type: "장기근속", score: 0, inputMode: "period", start: "2016-03-01", end: "2021-02-28", annualScore: "0.5" },
-        { id: "9a2680b1-c25b-4f8c-ab14-afc85f9f63e6", date: "", type: "복식학급담임교사", score: 0, inputMode: "period", start: "2021-03-01", end: "2022-02-28", annualScore: "0.5" },
-        { id: "91395f1c-f61d-418d-9e28-49699e8884d4", date: "", type: "영재교육원지도교사", score: 0, inputMode: "period", start: "2022-03-01", end: "2019-02-28", annualScore: "0.25" },
-        { id: "8b6e3c38-2d8d-4285-af62-3595b91023d5", date: "", type: "체육지도교사", score: 0, inputMode: "period", start: "2023-03-01", end: "2024-02-29", annualScore: "0.5" },
+        { id: "9a2680b1-c25b-4f8c-ab14-afc85f9f63e6", date: "", type: "부장교사", score: 0, inputMode: "period", start: "2023-03-01", end: "2024-02-29", annualScore: "0.5" },
+        { id: "91395f1c-f61d-418d-9e28-49699e8884d4", date: "", type: "영재교육원지도교사", score: 0, inputMode: "period", start: "2024-03-01", end: "2025-02-28", annualScore: "0.25" },
+        { id: "8b6e3c38-2d8d-4285-af62-3595b91023d5", date: "", type: "체육지도교사", score: 0, inputMode: "period", start: "2026-03-01", end: "2027-02-28", annualScore: "0.5" },
         { id: "834800c1-45b2-481d-b5ba-1b050ae83341", date: "2020-02-11", type: "불문경고", score: "-1", inputMode: "single", start: "", end: "", annualScore: 0 },
         { id: "86080049-130c-47d7-96fb-d440b9fd8317", date: "2017-11-22", type: "견책", score: "-2", inputMode: "single", start: "", end: "", annualScore: 0 }
       ],
@@ -440,6 +480,11 @@
       const addBonus = (preset) =>
         setState((s) => {
           const isPeriod = preset && (preset.label.includes("년 ") || preset.label.includes("연구학교"));
+          const isModel = preset && (preset.label.includes("국무총리표창") || preset.label.includes("교육감표창"));
+          let initialType = preset ? preset.label : "";
+          if (initialType === "연구실적") {
+            initialType = "연구점수 전국1등급";
+          }
           return {
             ...s,
             bonuses: [
@@ -447,12 +492,13 @@
               {
                 id: uid(),
                 date: "",
-                type: preset ? preset.label : "",
+                type: initialType,
                 score: preset ? preset.score : 0,
                 inputMode: isPeriod ? "period" : "single",
                 start: "",
                 end: "",
                 annualScore: preset ? preset.score : 0,
+                isModelCivilServant: isModel ? true : false,
               },
             ],
           };
@@ -472,19 +518,69 @@
             const zoneData = DISTRICT_ZONES[c.district]?.find((z) => z.code === c.zone);
             const annual = zoneData?.annual || 0;
             const monthly = zoneData?.monthly || 0;
-            const raw = computeYearsMonths(c.start, c.end);
-            const overlapDays = getOverlapDays(c.start, c.end, state.dispatches);
-            const netDays = Math.max(0, raw.totalDays - overlapDays);
-            const { years, months } = daysToYearsMonths(netDays);
-            const score = floor3(years * annual + months * monthly);
-            return { ...c, years, months, annual, score };
+            const net = getNetCalendarPeriod(c.start, c.end, state.dispatches);
+            
+            // 개별 행 표시용 년/월 계산 (남은 일수가 30일 이상일 때만 개별 행에서 개월로 올림 표기)
+            const normalizedMonths = net.months + Math.floor(net.days / 30);
+            const displayY = net.years + Math.floor(normalizedMonths / 12);
+            const displayM = normalizedMonths % 12;
+            const displayD = net.days % 30; // 자투리 일수
+
+            const score = floor3(displayY * annual + displayM * monthly);
+            return {
+              ...c,
+              years: displayY,
+              months: displayM,
+              days: displayD, // 자투리 일수 전달
+              netYears: net.years,   // 원본 년
+              netMonths: net.months, // 원본 월
+              netDays: net.days,     // 원본 일
+              annual,
+              monthly,
+              score
+            };
           }),
         [state.careers, state.dispatches]
       );
-      const careerSubtotal = floor3(careerRows.reduce((sum, c) => sum + c.score, 0));
+
+      const careerSubtotal = useMemo(() => {
+        // 그룹(district + zone)별로 원본 기간(년, 월, 일)을 모두 합산한 후 30일=1월 룰을 최종 적용하여 소계를 계산합니다.
+        const groups = {};
+        careerRows.forEach((r) => {
+          const key = `${r.district}_${r.zone}`;
+          if (!groups[key]) {
+            groups[key] = {
+              annual: r.annual,
+              monthly: r.monthly,
+              sumYears: 0,
+              sumMonths: 0,
+              sumDays: 0,
+            };
+          }
+          groups[key].sumYears += r.netYears;
+          groups[key].sumMonths += r.netMonths;
+          groups[key].sumDays += r.netDays;
+        });
+
+        let total = 0;
+        Object.values(groups).forEach((g) => {
+          let m = g.sumMonths + Math.floor(g.sumDays / 30); // 자투리 일수들을 모두 합산하여 30일마다 1월 평정
+          let y = g.sumYears + Math.floor(m / 12);
+          m = m % 12;
+          total += y * g.annual + m * g.monthly;
+        });
+        return floor3(total);
+      }, [careerRows]);
 
       const dispatchRows = useMemo(
-        () => state.dispatches.map((d) => ({ ...d, ...computeYearsMonths(d.start, d.end) })),
+        () =>
+          state.dispatches.map((d) => {
+            const diff = getCalendarDiff(d.start, d.end);
+            const totalMonths = diff.months + Math.floor(diff.days / 30);
+            const years = diff.years + Math.floor(totalMonths / 12);
+            const months = totalMonths % 12;
+            return { ...d, years, months };
+          }),
         [state.dispatches]
       );
 
@@ -495,19 +591,40 @@
       const computedBonuses = useMemo(
         () =>
           state.bonuses.map((b) => {
+            const isResSchool = b.type && b.type.includes("연구학교");
             if (b.inputMode === "period") {
-              const { years, months } = computeYearsMonths(b.start, b.end);
-              const totalMonths = years * 12 + months;
-              const score = floor3((Number(b.annualScore || 0) * totalMonths) / 12);
+              const diff = getCalendarDiff(b.start, b.end);
+              const totalMonths = diff.years * 12 + diff.months + Math.floor(diff.days / 30);
+              let score = floor3((Number(b.annualScore || 0) * totalMonths) / 12);
+              if (isResSchool) {
+                score = Math.min(1.0, score);
+              }
+              const years = Math.floor(totalMonths / 12);
+              const months = totalMonths % 12;
               return { ...b, score, years, months };
             }
-            return { ...b };
+            let score = Number(b.score) || 0;
+            if (isResSchool) {
+              score = Math.min(1.0, score);
+            }
+            return { ...b, score };
           }),
         [state.bonuses]
       );
 
       const bonusSubtotal = floor3(
-        computedBonuses.reduce((sum, b) => sum + (Number(b.score) || 0), 0) + salaryBonus
+        (() => {
+          const researchSchoolSum = computedBonuses
+            .filter(b => b.type && b.type.includes("연구학교"))
+            .reduce((sum, b) => sum + (Number(b.score) || 0), 0);
+          const researchSchoolCapped = Math.min(1.0, researchSchoolSum);
+
+          const otherBonusesSum = computedBonuses
+            .filter(b => !b.type || !b.type.includes("연구학교"))
+            .reduce((sum, b) => sum + (Number(b.score) || 0), 0);
+
+          return otherBonusesSum + researchSchoolCapped + salaryBonus;
+        })()
       );
 
       const totalScore = floor3(careerSubtotal + bonusSubtotal);
@@ -517,18 +634,19 @@
         () => [
           { id: "salary", date: `${state.schoolYear || 2027}.01.01.`, type: `호봉(${state.applicant.salaryStep || ""})`, score: salaryBonus },
           ...computedBonuses.map((b) => {
+            const displayType = b.isModelCivilServant ? `${b.type}(모범공무원)` : b.type;
             if (b.inputMode === "period") {
               return {
                 id: b.id,
                 date: b.start && b.end ? `${b.start.replace(/-/g, ".")}~${b.end.replace(/-/g, ".")}` : "-",
-                type: b.start && b.end ? `${b.type || "-"} (${b.years}년 ${b.months}월)` : b.type || "-",
+                type: b.start && b.end ? `${displayType || "-"} (${b.years}년 ${b.months}월)` : displayType || "-",
                 score: b.score,
               };
             }
             return {
               id: b.id,
               date: b.date || "-",
-              type: b.type || "-",
+              type: displayType || "-",
               score: b.score,
             };
           }),
@@ -1103,10 +1221,10 @@
                     </Field>
                     <div className="tp-row2">
                       <Field label="근무 시작일">
-                        <input type="date" value={c.start} onChange={(e) => updateCareer(c.id, { start: e.target.value })} />
+                        <input type="date" max="9999-12-31" value={c.start} onChange={(e) => updateCareer(c.id, { start: e.target.value })} />
                       </Field>
                       <Field label="근무 종료일">
-                        <input type="date" value={c.end} onChange={(e) => updateCareer(c.id, { end: e.target.value })} />
+                        <input type="date" max="9999-12-31" value={c.end} onChange={(e) => updateCareer(c.id, { end: e.target.value })} />
                       </Field>
                     </div>
                     <div className="tp-row2">
@@ -1163,10 +1281,10 @@
                     </div>
                     <div className="tp-row2">
                       <Field label="시작일">
-                        <input type="date" value={d.start} onChange={(e) => updateDispatch(d.id, { start: e.target.value })} />
+                        <input type="date" max="9999-12-31" value={d.start} onChange={(e) => updateDispatch(d.id, { start: e.target.value })} />
                       </Field>
                       <Field label="종료일">
-                        <input type="date" value={d.end} onChange={(e) => updateDispatch(d.id, { end: e.target.value })} />
+                        <input type="date" max="9999-12-31" value={d.end} onChange={(e) => updateDispatch(d.id, { end: e.target.value })} />
                       </Field>
                     </div>
                     <span className="tp-score-pill">
@@ -1186,65 +1304,96 @@
                     </button>
                   ))}
                 </div>
-                {computedBonuses.map((b) => (
-                  <div className="tp-card" key={b.id}>
-                    <button className="tp-card-remove" onClick={() => removeBonus(b.id)}>
-                      <Trash2 size={14} />
-                    </button>
-                    <div className="tp-row2" style={{ marginBottom: "6px" }}>
-                      <Field label="입력 방식">
-                        <select value={b.inputMode || "single"} onChange={(e) => updateBonus(b.id, { inputMode: e.target.value })}>
-                          <option value="single">단일 일자</option>
-                          <option value="period">근무 기간</option>
-                        </select>
-                      </Field>
-                      <div />
-                    </div>
-                    {b.inputMode === "period" ? (
-                      <>
+                {computedBonuses.map((b) => {
+                  const isResearch = RESEARCH_TYPES.some(r => b.type === r.label) || b.type === "연구실적";
+                  return (
+                    <div className="tp-card" key={b.id}>
+                      <button className="tp-card-remove" onClick={() => removeBonus(b.id)}>
+                        <Trash2 size={14} />
+                      </button>
+                      <div className="tp-row2" style={{ marginBottom: "6px" }}>
+                        <Field label="입력 방식">
+                          <select value={b.inputMode || "single"} onChange={(e) => updateBonus(b.id, { inputMode: e.target.value })}>
+                            <option value="single">단일 일자</option>
+                            <option value="period">근무 기간</option>
+                          </select>
+                        </Field>
+                        <div />
+                      </div>
+                      {b.inputMode === "period" ? (
+                        <>
+                          <div className="tp-row2">
+                            <Field label="근무 시작일">
+                              <input type="date" max="9999-12-31" value={b.start || ""} onChange={(e) => updateBonus(b.id, { start: e.target.value })} />
+                            </Field>
+                            <Field label="근무 종료일">
+                              <input type="date" max="9999-12-31" value={b.end || ""} onChange={(e) => updateBonus(b.id, { end: e.target.value })} />
+                            </Field>
+                          </div>
+                          <div className="tp-row2">
+                            <Field label="연 평정점">
+                              <input
+                                type="number"
+                                step="0.001"
+                                value={b.annualScore || ""}
+                                onChange={(e) => updateBonus(b.id, { annualScore: e.target.value })}
+                                placeholder="예) 0.5"
+                              />
+                            </Field>
+                            <Field label="자동 계산 평정점">
+                              <input type="text" disabled value={fmt(b.score)} />
+                            </Field>
+                          </div>
+                        </>
+                      ) : (
                         <div className="tp-row2">
-                          <Field label="근무 시작일">
-                            <input type="date" value={b.start || ""} onChange={(e) => updateBonus(b.id, { start: e.target.value })} />
+                          <Field label="연월일">
+                            <input type="date" max="9999-12-31" value={b.date} onChange={(e) => updateBonus(b.id, { date: e.target.value })} />
                           </Field>
-                          <Field label="근무 종료일">
-                            <input type="date" value={b.end || ""} onChange={(e) => updateBonus(b.id, { end: e.target.value })} />
-                          </Field>
-                        </div>
-                        <div className="tp-row2">
-                          <Field label="연 평정점">
+                          <Field label="평정점">
                             <input
-                              type="number"
-                              step="0.001"
-                              value={b.annualScore || ""}
-                              onChange={(e) => updateBonus(b.id, { annualScore: e.target.value })}
-                              placeholder="예) 0.5"
+                              type="text"
+                              value={b.score}
+                              onChange={(e) => updateBonus(b.id, { score: e.target.value })}
+                              placeholder="예) 0.5 또는 -1.0"
                             />
                           </Field>
-                          <Field label="자동 계산 평정점">
-                            <input type="text" disabled value={fmt(b.score)} />
-                          </Field>
                         </div>
-                      </>
-                    ) : (
-                      <div className="tp-row2">
-                        <Field label="연월일">
-                          <input type="date" value={b.date} onChange={(e) => updateBonus(b.id, { date: e.target.value })} />
+                      )}
+                      {isResearch ? (
+                        <Field label="종별 (연구실적)">
+                          <select
+                            value={b.type === "연구실적" ? "연구점수 전국1등급" : b.type}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const found = RESEARCH_TYPES.find(r => r.label === val);
+                              updateBonus(b.id, { type: val, score: found ? found.score : 0, annualScore: found ? found.score : 0 });
+                            }}
+                          >
+                            <option value="연구실적" disabled hidden>선택해 주세요</option>
+                            {RESEARCH_TYPES.map(r => (
+                              <option key={r.label} value={r.label}>{r.label}</option>
+                            ))}
+                          </select>
                         </Field>
-                        <Field label="평정점">
-                          <input
-                            type="text"
-                            value={b.score}
-                            onChange={(e) => updateBonus(b.id, { score: e.target.value })}
-                            placeholder="예) 0.5 또는 -1.0"
+                      ) : (
+                        <Field label="종별">
+                          <input type="text" value={b.type} onChange={(e) => updateBonus(b.id, { type: e.target.value })} />
+                        </Field>
+                      )}
+                      {(b.type.includes("국무총리표창") || b.type.includes("교육감표창")) && (
+                        <div className="tp-toggle" style={{ marginTop: "4px" }}>
+                          <span>모범공무원 여부</span>
+                          <button
+                            type="button"
+                            className={"tp-switch" + (b.isModelCivilServant ? " on" : "")}
+                            onClick={() => updateBonus(b.id, { isModelCivilServant: !b.isModelCivilServant })}
                           />
-                        </Field>
-                      </div>
-                    )}
-                    <Field label="종별">
-                      <input type="text" value={b.type} onChange={(e) => updateBonus(b.id, { type: e.target.value })} />
-                    </Field>
-                  </div>
-                ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
                 <RowActions onAdd={() => addBonus(null)} addLabel="가산점(감점) 항목 추가" />
                 <span className="tp-hint">
                   가산점(감점) 소계(자동계산, 호봉가산점 {fmt(salaryBonus)}점 포함): {fmt(bonusSubtotal)}점
@@ -1253,7 +1402,7 @@
 
               <Section title="⑨ 확인 · 서명" defaultOpen={false}>
                 <Field label="작성일자">
-                  <input type="date" value={state.confirmation.date} onChange={(e) => setConfirmation({ date: e.target.value })} />
+                  <input type="date" max="9999-12-31" value={state.confirmation.date} onChange={(e) => setConfirmation({ date: e.target.value })} />
                 </Field>
                 <Field label="학교장 성명">
                   <input type="text" value={state.confirmation.principal} onChange={(e) => setConfirmation({ principal: e.target.value })} />
@@ -1427,7 +1576,7 @@
                           <td className="tp-val">{c?.schoolName || ""}</td>
                           <td className="tp-val">{c ? `${c.start.replace(/-/g, ".")}~${c.end.replace(/-/g, ".")}` : ""}</td>
                           <td className="tp-val">{c ? `${c.years}.${String(c.months).padStart(2, "0")}` : ""}</td>
-                          <td className="tp-val">{c ? `${c.district.replace("지구", "")}(${c.zone})` : ""}</td>
+                          <td className="tp-val">{c ? `${c.district.replace("지구", "")}(${c.zone === "특" ? "특급지" : c.zone})` : ""}</td>
                           <td className="tp-val">{c ? fmt(c.score) : ""}</td>
                           {i === 0 && (
                             <td rowSpan={Math.max(4, careerRows.length) + Math.max(2, dispatchRows.length) + 1} className="tp-val" style={{ fontSize: "12px", fontWeight: "bold" }}>
