@@ -1133,7 +1133,7 @@
                   </Field>
                 </div>
                 <div className="tp-row2">
-                  <Field label="교육총경력">
+                  <Field label="교육총경력" hint="나이스-경력에서 ( )경력 기재(희망년도 2월말 기준)">
                     <input
                       type="number"
                       step="0.01"
@@ -1141,7 +1141,7 @@
                       onChange={(e) => setApplicant({ totalCareerYears: e.target.value })}
                     />
                   </Field>
-                  <Field label="현시군 근속연수">
+                  <Field label="현시군 근속연수" hint="예시: 8년 6월 8.06으로 기재">
                     <input
                       type="number"
                       step="0.01"
@@ -1151,7 +1151,7 @@
                   </Field>
                 </div>
                 <div className="tp-row2">
-                  <Field label="현재교 근속연수">
+                  <Field label="현재교 근속연수" hint="예시: 4년 근무 4.00으로 기재">
                     <input
                       type="number"
                       step="0.01"
@@ -1161,6 +1161,9 @@
                   </Field>
                   <div />
                 </div>
+                <span className="tp-hint" style={{ marginTop: "10px", display: "block", lineHeight: "1.4" }}>
+                  * 현시군·현재교 근속 연수: 현시군·현재교 발령 이후 근무한 기간으로 파견, 휴직, 정직, 직위해제 등의 근무하지 않은 기간을 제외한 실제 근무한 기간을 의미함.(근무기간-파견·휴직 기간=근속연수)
+                </span>
               </Section>
 
               <Section title="② 희망지" required>
@@ -1303,6 +1306,10 @@
               </Section>
 
               <Section title="⑥ 경력평정" required>
+                <span className="tp-hint" style={{ marginBottom: "8px", display: "block", lineHeight: "1.4" }}>
+                  * 동일 직위 현 소속 시·군에서 근무한 최근 5년간의 경력 기재<br />
+                  &nbsp;&nbsp;(파견, 휴직이 있는 경우 해당 기간 제외한 5년간의 경력)
+                </span>
                 {careerRows.map((c) => (
                   <div className="tp-card" key={c.id}>
                     <button className="tp-card-remove" onClick={() => removeCareer(c.id)}>
@@ -1352,6 +1359,9 @@
               </Section>
 
               <Section title="⑦ 파견·휴직" defaultOpen={false}>
+                <span className="tp-hint" style={{ marginBottom: "8px", display: "block" }}>
+                  * 정직, 직위해제, 파견, 휴직기간 입력 시 경력평정의 근무년수에 자동반영됩니다.
+                </span>
                 {dispatchRows.map((d) => (
                   <div className="tp-card" key={d.id}>
                     <button className="tp-card-remove" onClick={() => removeDispatch(d.id)}>
@@ -1388,8 +1398,10 @@
               </Section>
 
               <Section title="⑧ 가산점(감점) 평정" required>
-                <span className="tp-hint" style={{ marginBottom: "8px", display: "block" }}>
-                  가산점 입력은 본인에게 해당사항이 있는 평정 항목에 맞춰 차례대로 입력하시기 바랍니다.
+                <span className="tp-hint" style={{ marginBottom: "12px", display: "block", lineHeight: "1.4" }}>
+                  1. 가산점 입력은 본인에게 해당사항이 있는 평정 항목에 맞춰 차례대로 입력하시기 바랍니다.<br />
+                  2. 표창은 당해 직위에서 그 외의 항목은 현 소속 시·군에서 최근 5년 이내 당해 직위에서 평정할 수 있는 가산점 중 유리한 것 1개만 적용.<br />
+                  3. 장기 근속 평정점은 3,4지구 근무자만 해당(속초,동해 제외)
                 </span>
                 <div className="tp-preset-row">
                   {BONUS_PRESETS.slice(0, 8).map((p) => (
