@@ -105,29 +105,27 @@
     /* ------------------------------------------------------------------ */
     const DISTRICT_ZONES = {
       "1지구": [
-        { code: "일반지(시동)", label: "일반지 - 춘천·원주·강릉 시동", annual: 12.0, monthly: 1.0 },
+        { code: "일반지(시동)", label: "춘천·원주·강릉 시동", annual: 12.0, monthly: 1.0 },
         { code: "일반지(읍면)", label: "일반지 - 읍면", annual: 12.5, monthly: 1.041 },
-        { code: "다", label: "벽지 다급지", annual: 13.0, monthly: 1.083 },
-        { code: "라", label: "벽지 라급지", annual: 13.0, monthly: 1.083 },
-        { code: "가", label: "벽지 가급지", annual: 13.5, monthly: 1.125 },
-        { code: "나", label: "벽지 나급지", annual: 13.5, monthly: 1.125 },
+        { code: "다,라", label: "벽지 다,라급지", annual: 13.0, monthly: 1.083 },
+        { code: "가,나", label: "벽지 가,나급지", annual: 13.5, monthly: 1.125 },
+      ],
+      "2지구": [
+        { code: "일반지(시동)", label: "일반지 - 속초·동해시", annual: 12.5, monthly: 1.041 },
+        { code: "다,라", label: "벽지 다,라급지", annual: 13.0, monthly: 1.083 },
+        { code: "가,나", label: "벽지 가,나급지", annual: 13.5, monthly: 1.125 },
         { code: "특", label: "특급지(별표2)", annual: 14.0, monthly: 1.166 },
       ],
-      "2지구": [{ code: "특", label: "특급지(속초시·동해시 교감)", annual: 14.0, monthly: 1.166 }],
       "3지구": [
         { code: "일반지", label: "일반지", annual: 13.5, monthly: 1.125 },
-        { code: "다", label: "벽지 다급지", annual: 14.0, monthly: 1.166 },
-        { code: "라", label: "벽지 라급지", annual: 14.0, monthly: 1.166 },
-        { code: "가", label: "벽지 가급지", annual: 14.5, monthly: 1.208 },
-        { code: "나", label: "벽지 나급지", annual: 14.5, monthly: 1.208 },
+        { code: "다,라", label: "벽지 다,라급지", annual: 14.0, monthly: 1.166 },
+        { code: "가,나", label: "벽지 가,나급지", annual: 14.5, monthly: 1.208 },
         { code: "특", label: "특급지(별표2)", annual: 15.0, monthly: 1.250 },
       ],
       "4지구": [
-        { code: "일반지", label: "일반지", annual: 14.5, monthly: 1.208 },
-        { code: "다", label: "벽지 다급지", annual: 15.0, monthly: 1.250 },
-        { code: "라", label: "벽지 라급지", annual: 15.0, monthly: 1.250 },
-        { code: "가", label: "벽지 가급지", annual: 15.5, monthly: 1.291 },
-        { code: "나", label: "벽지 나급지", annual: 15.5, monthly: 1.291 },
+        { code: "일반지", label: "일반지(삼척시동)", annual: 14.5, monthly: 1.208 },
+        { code: "다,라", label: "벽지 다,라급지(삼척시읍면·기타시군)", annual: 15.0, monthly: 1.250 },
+        { code: "가,나", label: "벽지 가,나급지", annual: 15.5, monthly: 1.291 },
         { code: "특", label: "특급지(별표2)", annual: 16.0, monthly: 1.333 },
       ],
     };
@@ -366,7 +364,9 @@
       transferReason: REASON_PRESETS[1],
       transferReasonCustom: "",
       family: [],
-      careers: [],
+      careers: [
+        { id: uid(), schoolName: "", start: "", end: "", district: "1지구", zone: "일반지(시동)" }
+      ],
       dispatches: [],
       bonuses: [
         {
@@ -1183,7 +1183,7 @@
                       onChange={(e) => setApplicant({ birthDate: e.target.value.replace(/\D/g, "") })}
                     />
                   </Field>
-                  <Field label="호봉" hint="해당 학년도 1. 1.자 기준">
+                  <Field label="호봉" hint={<>해당 학년도 1. 1.자 기준<br />*근가1호봉=41호봉</>}>
                     <input
                       type="number"
                       value={state.applicant.salaryStep}
