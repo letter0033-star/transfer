@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>초등 전보희망원(관외) 작성 프로그램</title>
+  <title>강원특별자치도교육청 전보희망원(관외) 작성 도우미</title>
   
   <!-- React and ReactDOM CDNs -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
@@ -192,7 +192,7 @@
       { label: "1.표창", score: 2.5 },
       { label: "2.연구실적", score: 1.0 },
       { label: "3.연구학교", score: 0.375 },
-      { label: "5.우대", score: 1.0 },
+      { label: "5.우대", score: 1.5 },
       { label: "7.장기근속", score: 0.5 },
       { label: "8.기타", score: 1.0 },
       { label: "8.기타(호봉)", score: 0 },
@@ -1265,6 +1265,12 @@
                     />
                   </Field>
                 ))}
+                <span className="tp-hint" style={{ marginTop: "6px", display: "block", lineHeight: "1.5" }}>
+                  - 1지구 근무연한 만기자는 1지구에 전보 불가<br />
+                  - 1, 2지구에서 전보된 자는 2년 이상 근무하여야 전보 가능<br />
+                  - 3, 4지구에서 근무연한 만기로 전보된 자는 2년 이상 근무하여야 전 근무지로 전보 가능<br />
+                  - 3, 4지구에서 정원 감축으로 근무연한 만기 전 본의 아니게 전보된 자는 1년 이상 근무하면 전 근무지로 전보 가능
+                </span>
               </Section>
 
               <Section title="③ 특이사항 체크">
@@ -1419,7 +1425,7 @@
                 ))}
                 <div style={{ display: "flex", gap: "8px", marginTop: "12px", alignItems: "center" }}>
                   <RowActions onAdd={addCareer} addLabel="경력 추가" />
-                  <button type="button" className="tp-preset-chip" style={{ margin: 0, height: "36px", padding: "0 12px", border: "1px solid var(--line)" }} onClick={() => setViewerImage({ src: "기준표.jpg", title: "경력평정 기준표" })}>
+                  <button type="button" className="tp-preset-chip" style={{ margin: 0, height: "36px", padding: "0 12px", border: "1px solid var(--line)" }} onClick={() => setViewerImage({ src: "26.08기준표.jpg", title: "경력평정 기준표" })}>
                     기준표
                   </button>
                   <button type="button" className="tp-preset-chip" style={{ margin: 0, height: "36px", padding: "0 12px", border: "1px solid var(--line)" }} onClick={() => setViewerImage({ src: "특급지.jpg", title: "특·급지 학교 안내" })}>
@@ -1472,7 +1478,8 @@
                 <span className="tp-hint" style={{ marginBottom: "12px", display: "block", lineHeight: "1.4" }}>
                   1. 가산점 입력은 본인에게 해당사항이 있는 평정 항목에 맞춰 차례대로 입력하시기 바랍니다.<br />
                   2. 표창은 당해 직위에서 그 외의 항목은 현 소속 시·군에서 최근 5년 이내 당해 직위에서 평정할 수 있는 가산점 중 유리한 것 1개만 적용.<br />
-                  3. 장기 근속 평정점은 3,4지구 근무자만 해당(속초,동해 제외)
+                  3. 장기 근속 평정점은 3,4지구 근무자만 해당(속초,동해 제외)<br />
+                  4. 가산점 평정 기간은 근무지 경력 평정 기간과 동일하게 적용합니다.
                 </span>
                 <div className="tp-preset-row">
                   {BONUS_PRESETS.slice(0, 8).map((p) => (
@@ -1659,7 +1666,7 @@
                 </div>
                 <div style={{ display: "flex", gap: "8px", marginTop: "12px", alignItems: "center" }}>
                   <RowActions onAdd={() => addBonus(null)} addLabel="가산점(감점) 항목 추가" />
-                  <button type="button" className="tp-preset-chip" style={{ margin: 0, height: "36px", padding: "0 12px", border: "1px solid var(--line)" }} onClick={() => setViewerImage({ src: "가산점.jpg", title: "가산점(감점) 평정 기준" })}>
+                  <button type="button" className="tp-preset-chip" style={{ margin: 0, height: "36px", padding: "0 12px", border: "1px solid var(--line)" }} onClick={() => setViewerImage({ src: "26.08가산점.jpg", title: "가산점(감점) 평정 기준" })}>
                     가산점 보기
                   </button>
                 </div>
