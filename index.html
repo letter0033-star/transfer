@@ -1478,8 +1478,8 @@
                 <span className="tp-hint" style={{ marginBottom: "12px", display: "block", lineHeight: "1.4" }}>
                   1. 가산점 입력은 본인에게 해당사항이 있는 평정 항목에 맞춰 차례대로 입력하시기 바랍니다.<br />
                   2. 표창은 당해 직위에서 그 외의 항목은 현 소속 시·군에서 최근 5년 이내 당해 직위에서 평정할 수 있는 가산점 중 유리한 것 1개만 적용.<br />
-                  3. 장기 근속 평정점은 3,4지구 근무자만 해당(속초,동해 제외)<br />
-                  4. 가산점 평정 기간은 근무지 경력 평정 기간과 동일하게 적용합니다.
+                  3. 가산점 평정 기간은 근무지 경력 평정 기간과 동일하게 적용합니다.<br />
+                  - 장기근속 가산점은 3,4지구만 해당함.(속초,동해 제외)
                 </span>
                 <div className="tp-preset-row">
                   {BONUS_PRESETS.slice(0, 8).map((p) => (
@@ -1642,6 +1642,11 @@
                       ) : (
                         <Field label="종별">
                           <input type="text" value={b.type} onChange={(e) => updateBonus(b.id, { type: e.target.value })} />
+                          {b.type && b.type.includes("장기근속") && (
+                            <span className="tp-hint" style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px", display: "block" }}>
+                              - 장기근속 가산점은 3,4지구만 해당함.(속초,동해 제외)
+                            </span>
+                          )}
                         </Field>
                       )}
                       {(b.type.includes("국무총리표창") || b.type.includes("교육감표창")) && (
