@@ -100,6 +100,14 @@
       </svg>
     );
 
+    const HelpCircle = ({ size = 16, ...props }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+      </svg>
+    );
+
     /* ------------------------------------------------------------------ */
     /* 규정 근거 데이터 (별표1 / 별표2) — 프로토타입용 best-effort 매핑          */
     /* ------------------------------------------------------------------ */
@@ -507,6 +515,7 @@
     function TransferApplicationPrototype() {
       const [state, setState] = useState(initialState);
       const [viewerImage, setViewerImage] = useState(null);
+      const [showGuideModal, setShowGuideModal] = useState(true);
 
       const setApplicant = (patch) =>
         setState((s) => ({ ...s, applicant: { ...s.applicant, ...patch } }));
@@ -854,12 +863,34 @@
             }
             .tp-app * { box-sizing: border-box; }
             .tp-header {
-              padding: 18px 24px;
+              padding: 16px 24px;
               background: var(--ink);
               color: #fff;
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              gap: 16px;
             }
             .tp-header h1 { font-size: 17px; margin: 0; letter-spacing: 0.02em; font-weight: 700; }
             .tp-header p { margin: 4px 0 0; font-size: 12px; color: #c9d2e6; }
+            .tp-header-btn {
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+              background: rgba(255, 255, 255, 0.14);
+              color: #fff;
+              border: 1px solid rgba(255, 255, 255, 0.28);
+              border-radius: 7px;
+              padding: 7px 13px;
+              font-size: 12.5px;
+              font-weight: 700;
+              cursor: pointer;
+              white-space: nowrap;
+              transition: background 0.15s;
+            }
+            .tp-header-btn:hover {
+              background: rgba(255, 255, 255, 0.24);
+            }
             .tp-body {
               flex: 1;
               display: grid;
@@ -1099,6 +1130,9 @@
               .tp-disclaimer {
                 display: none !important;
               }
+              .tp-image-modal-overlay, .tp-guide-modal-overlay {
+                display: none !important;
+              }
             }
             .tp-image-modal-overlay {
               position: fixed;
@@ -1152,11 +1186,120 @@
               margin-top: 10px;
               border: 1px solid #c7cdd8;
             }
+            .tp-guide-modal-overlay {
+              position: fixed;
+              inset: 0;
+              background: rgba(15, 24, 42, 0.62);
+              z-index: 9998;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 20px;
+              backdrop-filter: blur(4px);
+            }
+            .tp-guide-modal {
+              background: #fff;
+              border-radius: 14px;
+              width: 680px;
+              max-width: 100%;
+              max-height: 88vh;
+              display: flex;
+              flex-direction: column;
+              box-shadow: 0 20px 45px rgba(15, 24, 42, 0.28);
+              overflow: hidden;
+              border: 1px solid var(--line);
+            }
+            .tp-guide-header {
+              background: var(--ink);
+              color: #fff;
+              padding: 16px 22px;
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+            }
+            .tp-guide-header h3 {
+              margin: 0;
+              font-size: 16px;
+              font-weight: 700;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+            }
+            .tp-guide-close {
+              background: rgba(255, 255, 255, 0.15);
+              border: none;
+              color: #fff;
+              width: 28px;
+              height: 28px;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              cursor: pointer;
+            }
+            .tp-guide-close:hover {
+              background: rgba(255, 255, 255, 0.28);
+            }
+            .tp-guide-body {
+              padding: 20px 24px;
+              overflow-y: auto;
+              font-size: 13px;
+              line-height: 1.6;
+              color: var(--ink);
+              display: flex;
+              flex-direction: column;
+              gap: 16px;
+            }
+            .tp-guide-box {
+              border: 1px solid var(--line);
+              border-radius: 10px;
+              padding: 14px 16px;
+              background: #fafbfd;
+            }
+            .tp-guide-box.warn {
+              border-color: #e2b4ae;
+              background: #fdf6f5;
+            }
+            .tp-guide-box h4 {
+              margin: 0 0 8px 0;
+              font-size: 14px;
+              font-weight: 800;
+              color: var(--ink);
+              display: flex;
+              align-items: center;
+              gap: 6px;
+            }
+            .tp-guide-box.warn h4 {
+              color: var(--seal);
+            }
+            .tp-guide-list {
+              margin: 0;
+              padding-left: 18px;
+              display: flex;
+              flex-direction: column;
+              gap: 5px;
+            }
+            .tp-guide-list li b {
+              color: var(--ink);
+            }
+            .tp-guide-footer {
+              padding: 12px 22px;
+              border-top: 1px solid var(--line);
+              background: #f7f8fb;
+              display: flex;
+              justify-content: flex-end;
+              gap: 8px;
+            }
           `}</style>
 
           <header className="tp-header">
-            <h1>강원특별자치도교육청 전보희망원(관외) 작성 도우미</h1>
-            <p>좌측에 정보를 입력하면 우측 미리보기에 실시간으로 반영됩니다 · 서식1(수석교사·교사용) 프로토타입</p>
+            <div>
+              <h1>강원특별자치도교육청 전보희망원(관외) 작성 도우미</h1>
+              <p>좌측에 정보를 입력하면 우측 미리보기에 실시간으로 반영됩니다 · 서식1(수석교사·교사용) 프로토타입</p>
+            </div>
+            <button type="button" className="tp-header-btn" onClick={() => setShowGuideModal(true)}>
+              <HelpCircle size={15} /> 사용방법 및 주의사항
+            </button>
           </header>
 
           <div className="tp-body">
@@ -2044,6 +2187,9 @@
               {missingRequired && <span className="tp-warn">필수 항목을 확인해 주세요</span>}
             </div>
             <div className="tp-toolbar-btns">
+              <button className="tp-btn" onClick={() => setShowGuideModal(true)}>
+                <HelpCircle size={14} /> 사용안내
+              </button>
               <button className="tp-btn" onClick={loadSampleData}>
                 <Upload size={14} /> 샘플 불러오기
               </button>
@@ -2070,6 +2216,60 @@
                 </button>
                 <h3 style={{ margin: "0 0 10px 0", fontSize: "16px", fontWeight: "bold", color: "#1b2a4a" }}>{viewerImage.title}</h3>
                 <img src={viewerImage.src} className="tp-image-modal-img" alt={viewerImage.title} />
+              </div>
+            </div>
+          )}
+          {showGuideModal && (
+            <div className="tp-guide-modal-overlay" onClick={() => setShowGuideModal(false)}>
+              <div className="tp-guide-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="tp-guide-header">
+                  <h3>
+                    <HelpCircle size={18} /> 전보희망원(관외) 작성 도우미 — 사용방법 및 주의사항
+                  </h3>
+                  <button type="button" className="tp-guide-close" onClick={() => setShowGuideModal(false)}>
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div className="tp-guide-body">
+                  <div className="tp-guide-box">
+                    <h4>📌 프로그램 사용방법</h4>
+                    <ul className="tp-guide-list">
+                      <li><b>실시간 작성 및 미리보기</b>: 좌측 입력란(①~⑨)을 순서대로 입력하면 우측 전보희망원 서식에 실시간으로 반영되고 평정점이 자동 계산됩니다.</li>
+                      <li><b>기준표 확인</b>: 경력평정 섹션의 <b>[기준표]</b>, <b>[특급지]</b> 버튼과 가산점 섹션의 <b>[가산점 보기]</b> 버튼을 눌러 최신 평정 기준표를 바로 확인할 수 있습니다.</li>
+                      <li><b>샘플 불러오기</b>: 하단 툴바의 <b>[샘플 불러오기]</b>를 클릭하면 작성 예시(김나라) 데이터를 불러와 입력 형태를 미리 살펴볼 수 있습니다.</li>
+                      <li><b>파일 저장 및 불러오기</b>: 작성 중인 내용은 <b>[내보내기]</b>로 파일(.json)로 보관하고, 언제든 <b>[불러오기]</b>로 이어서 수정할 수 있습니다.</li>
+                      <li><b>인쇄 / PDF 저장</b>: 작성이 완료되면 <b>[인쇄 / PDF 저장]</b> 버튼을 눌러 A4 규격 서식으로 출력하거나 PDF로 저장하세요.</li>
+                    </ul>
+                  </div>
+
+                  <div className="tp-guide-box">
+                    <h4>📋 항목별 작성 시 유의사항 (붙임7-1 기준)</h4>
+                    <ul className="tp-guide-list">
+                      <li><b>희망지 기재</b>: <b>지구만기자</b>에 한하여 제4희망까지 기재하며, 그 외 일반 희망자는 <b>1희망만</b> 기재합니다. (1지구 만기자는 1지구 전보 불가)</li>
+                      <li><b>호봉 및 교육총경력</b>: 호봉은 <b>2027. 1. 1.자 기준(정기승급 반영)</b>으로 기재하고, 교육총경력은 교사로 임용되어 근무한 경력(임용 전 경력 제외, 2월 말 기준)을 기재합니다.</li>
+                      <li><b>현시군·현재교 근속연수</b>: 파견·휴직·정직·직위해제 등 실제 근무하지 않은 기간을 <b>제외한</b> 실근무 기간을 기재합니다. (예: 4년 → <code>4.00</code>, 8년 6월 → <code>8.06</code>)</li>
+                      <li><b>경력평정</b>: 타시군 전보 시 현시군 최근 5년 경력만 해당합니다. 파견·휴직 입력 시 겹치는 기간은 근무년수에서 자동 차감되며, 합산 잔여일은 <b>30일 이상일 때만 1월</b>로 산입됩니다.</li>
+                      <li><b>지구(급지) 표기</b>: <b>1지구(춘천·원주·강릉)·4지구(삼척)</b> 일반지는 <code>1(시동)</code>, <code>1(읍면)</code>, <code>4(시동)</code>, <code>4(읍면)</code>으로 구분하며, 2·3지구 일반지는 <code>2(일반지)</code>, <code>3(일반지)</code>, 벽지·특급지는 <code>(다)</code>, <code>(라)</code>, <code>(가)</code>, <code>(나)</code>, <code>(특급지)</code>로 표기합니다.</li>
+                      <li><b>가산점 및 감점</b>: 표창·연구실적·우대는 <b>12. 31. 기준</b>, 호봉은 <b>1. 1. 기준</b>, 그 외 가산점은 <b>2월 말 기준</b>으로 평정합니다. (장기근속 가산점은 3·4지구만 해당, 속초·동해 제외 / 2026. 1. 1.~12. 31. 발생한 행정경고 등 감점 확인 필수)</li>
+                    </ul>
+                  </div>
+
+                  <div className="tp-guide-box warn">
+                    <h4>⚠️ 필수 주의사항</h4>
+                    <ul className="tp-guide-list">
+                      <li>본 프로그램은 선생님들의 전보희망원 작성을 돕기 위한 <b>참고용 지원 도구</b>입니다.</li>
+                      <li>개인정보 및 입력 데이터는 서버로 전송되지 않으며 현재 브라우저에만 유지됩니다. 창을 닫기 전 필요시 <b>[내보내기]</b>로 백업해 주세요.</li>
+                      <li>최종 제출 전에는 반드시 <b>「강원특별자치도 교육공무원 인사관리 지침(초등)」 부록 별표1·별표2 원문 및 공식 작성방법</b>과 대조하여 <b>본인이 직접 최종 검토·확인하여 학교 인사담당자(교감)에게 제출</b>하시기 바랍니다.</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="tp-guide-footer">
+                  <button type="button" className="tp-btn primary" onClick={() => setShowGuideModal(false)}>
+                    확인 및 작성 시작하기
+                  </button>
+                </div>
               </div>
             </div>
           )}
