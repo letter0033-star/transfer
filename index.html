@@ -614,6 +614,7 @@
                 inputMode: isPeriod ? "period" : "single",
                 start: "",
                 end: "",
+                periods: isPeriod ? [{ id: uid(), start: "", end: "" }] : [],
                 annualScore: initialScore,
                 isModelCivilServant: isModel ? true : false,
               },
@@ -627,6 +628,59 @@
         }));
       const removeBonus = (id) =>
         setState((s) => ({ ...s, bonuses: s.bonuses.filter((b) => b.id !== id) }));
+
+      const addBonusPeriod = (bonusId) =>
+        setState((s) => ({
+          ...s,
+          bonuses: s.bonuses.map((b) => {
+            if (b.id !== bonusId) return b;
+            const currentPeriods = (b.periods && b.periods.length > 0)
+              ? [...b.periods]
+              : [{ id: uid(), start: b.start || "", end: b.end || "" }];
+            return {
+              ...b,
+              periods: [...currentPeriods, { id: uid(), start: "", end: "" }],
+            };
+          }),
+        }));
+
+      const updateBonusPeriod = (bonusId, periodIndex, patch) =>
+        setState((s) => ({
+          ...s,
+          bonuses: s.bonuses.map((b) => {
+            if (b.id !== bonusId) return b;
+            const currentPeriods = (b.periods && b.periods.length > 0)
+              ? [...b.periods]
+              : [{ id: uid(), start: b.start || "", end: b.end || "" }];
+            currentPeriods[periodIndex] = { ...currentPeriods[periodIndex], ...patch };
+            const first = currentPeriods[0] || {};
+            return {
+              ...b,
+              periods: currentPeriods,
+              start: first.start || "",
+              end: first.end || "",
+            };
+          }),
+        }));
+
+      const removeBonusPeriod = (bonusId, periodIndex) =>
+        setState((s) => ({
+          ...s,
+          bonuses: s.bonuses.map((b) => {
+            if (b.id !== bonusId) return b;
+            const currentPeriods = (b.periods && b.periods.length > 0)
+              ? [...b.periods]
+              : [{ id: uid(), start: b.start || "", end: b.end || "" }];
+            const nextPeriods = currentPeriods.filter((_, idx) => idx !== periodIndex);
+            const first = nextPeriods[0] || {};
+            return {
+              ...b,
+              periods: nextPeriods.length > 0 ? nextPeriods : [{ id: uid(), start: "", end: "" }],
+              start: first.start || "",
+              end: first.end || "",
+            };
+          }),
+        }));
 
       /* ---- 자동 계산 ---- */
       const careerRows = useMemo(
@@ -712,15 +766,50 @@
             let limit = OTHER_LIMITS[b.type];
             if (isResSchool) limit = 1.0;
             if (b.inputMode === "period") {
-              const diff = getCalendarDiff(b.start, b.end);
-              const totalMonths = diff.years * 12 + diff.months + Math.floor(diff.days / 30);
+              const periods = (b.periods && b.periods.length > 0)
+                ? b.periods
+                : [{ start: b.start || "", end: b.end || "" }];
+
+              let totalMonths = 0;
+              let totalDays = 0;
+              let hasAnyValid = false;
+              const computedPeriodList = [];
+
+              periods.forEach((p) => {
+                if (p.start && p.end) {
+                  hasAnyValid = true;
+                  const diff = getCalendarDiff(p.start, p.end);
+                  totalMonths += diff.years * 12 + diff.months;
+                  totalDays += diff.days;
+                  computedPeriodList.push({
+                    start: p.start,
+                    end: p.end,
+                    years: diff.years,
+                    months: diff.months,
+                    days: diff.days,
+                  });
+                }
+              });
+
+              totalMonths += Math.floor(totalDays / 30);
+              const years = Math.floor(totalMonths / 12);
+              const months = totalMonths % 12;
+
               let parsedScore = floor3((Number(b.annualScore || 0) * totalMonths) / 12);
               if (limit !== undefined && limit !== null) {
                 parsedScore = Math.min(limit, parsedScore);
               }
-              const years = Math.floor(totalMonths / 12);
-              const months = Math.floor(totalMonths % 12);
-              return { ...b, parsedScore, years, months };
+
+              return {
+                ...b,
+                periods,
+                computedPeriodList,
+                hasAnyValid,
+                parsedScore,
+                years,
+                months,
+                totalMonths,
+              };
             }
             let parsedScore = Number(b.score) || 0;
             if (limit !== undefined && limit !== null) {
@@ -730,7 +819,7 @@
           }),
         [state.bonuses]
       );
- 
+
       const bonusSubtotal = floor3(
         (() => {
           const scoresByType = {};
@@ -758,9 +847,9 @@
           return sum;
         })()
       );
- 
+
       const totalScore = floor3(careerSubtotal + bonusSubtotal);
- 
+
       // 서식 실제 레이아웃: 연월일/종별/평정점 2열 배치 후 소계를 오른쪽에 rowSpan으로 병합
       const bonusItems = useMemo(
         () => [
@@ -768,10 +857,18 @@
             const displayType = b.isModelCivilServant ? `${b.type}(모범공무원)` : b.type;
             if (b.inputMode === "period") {
               const periodStr = b.years > 0 ? (b.months > 0 ? `${b.years}년 ${b.months}월` : `${b.years}년`) : `${b.months}월`;
+              const validPeriods = (b.computedPeriodList && b.computedPeriodList.length > 0)
+                ? b.computedPeriodList
+                : (b.start && b.end ? [{ start: b.start, end: b.end }] : []);
+
+              const dateStr = validPeriods.length > 0
+                ? validPeriods.map((p) => `${formatDateStr(p.start)}~${formatDateStr(p.end)}`).join("\n")
+                : "-";
+
               return {
                 id: b.id,
-                date: b.start && b.end ? `${formatDateStr(b.start)}~${formatDateStr(b.end)}` : "-",
-                type: b.start && b.end ? `${displayType || "-"} (${periodStr})` : displayType || "-",
+                date: dateStr,
+                type: validPeriods.length > 0 ? `${displayType || "-"} (${periodStr})` : displayType || "-",
                 score: b.parsedScore,
               };
             }
@@ -1294,7 +1391,12 @@
 
           <header className="tp-header">
             <div>
-              <h1>강원특별자치도교육청 전보희망원(관외) 작성 도우미</h1>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                <h1>강원특별자치도교육청 전보희망원(관외) 작성 도우미</h1>
+                <span style={{ fontSize: "11px", background: "rgba(255, 255, 255, 0.18)", color: "#e2e8f0", padding: "2px 8px", borderRadius: "4px", fontWeight: "500" }}>
+                  업데이트 2026.11.17.
+                </span>
+              </div>
               <p>좌측에 정보를 입력하면 우측 미리보기에 실시간으로 반영됩니다 · 서식1(수석교사·교사용) 프로토타입</p>
             </div>
             <button type="button" className="tp-header-btn" onClick={() => setShowGuideModal(true)}>
@@ -1659,10 +1761,11 @@
                   const isResearch = RESEARCH_TYPES.some(r => b.type === r.label) || b.type === "2.연구실적" || b.type === "연구실적";
                   const isOtherDropdown = OTHER_TYPES.some(o => b.type === o.label) || b.type === "8.기타";
                   const isDemerit = DEMERIT_TYPES.some(d => b.type === d.label) || b.type === "감점";
+                  const isResSchool = b.type && b.type.includes("연구학교");
                   let categoryLabel = "가산점";
                   if (isAward) categoryLabel = "1.표창";
                   else if (isResearch) categoryLabel = "2.연구실적";
-                  else if (b.type && b.type.includes("연구학교")) categoryLabel = "3.연구학교";
+                  else if (isResSchool) categoryLabel = "3.연구학교";
                   else if (b.type && b.type.includes("우대")) categoryLabel = "5.우대";
                   else if (b.type && b.type.includes("장기근속")) categoryLabel = "7.장기근속";
                   else if (b.type && b.type.includes("호봉")) categoryLabel = "8.기타(호봉)";
@@ -1676,7 +1779,7 @@
                       </button>
                       <div className="tp-row2" style={{ marginBottom: "6px" }}>
                         <Field label={`${categoryLabel} 입력 방식`}>
-                          <select value={b.inputMode || "single"} disabled={isOtherDropdown} onChange={(e) => updateBonus(b.id, { inputMode: e.target.value })}>
+                          <select value={b.inputMode || "single"} disabled={isOtherDropdown || isResSchool} onChange={(e) => updateBonus(b.id, { inputMode: e.target.value })}>
                             <option value="single">단일 일자</option>
                             <option value="period">근무 기간</option>
                           </select>
@@ -1685,13 +1788,84 @@
                       </div>
                       {b.inputMode === "period" ? (
                         <>
-                          <div className="tp-row2">
-                            <Field label="근무 시작일">
-                              <input type="date" max="9999-12-31" value={b.start || ""} onChange={(e) => updateBonus(b.id, { start: e.target.value })} />
-                            </Field>
-                            <Field label="근무 종료일">
-                              <input type="date" max="9999-12-31" value={b.end || ""} onChange={(e) => updateBonus(b.id, { end: e.target.value })} />
-                            </Field>
+                          {((b.periods && b.periods.length > 0) ? b.periods : [{ id: "p0", start: b.start || "", end: b.end || "" }]).map((p, pIdx, pArr) => (
+                            <div
+                              key={p.id || pIdx}
+                              style={{
+                                position: "relative",
+                                marginBottom: "6px",
+                                padding: pArr.length > 1 ? "8px" : "0",
+                                background: pArr.length > 1 ? "#f8fafc" : "transparent",
+                                borderRadius: "6px",
+                                border: pArr.length > 1 ? "1px dashed #cbd5e1" : "none",
+                              }}
+                            >
+                              {pArr.length > 1 && (
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                                  <span style={{ fontSize: "11.5px", fontWeight: "600", color: "#475569" }}>
+                                    근무기간 {pIdx + 1}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeBonusPeriod(b.id, pIdx)}
+                                    style={{
+                                      background: "none",
+                                      border: "none",
+                                      color: "#ef4444",
+                                      cursor: "pointer",
+                                      padding: "2px 4px",
+                                      fontSize: "11px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "2px",
+                                    }}
+                                    title="해당 기간 삭제"
+                                  >
+                                    <Trash2 size={12} /> 삭제
+                                  </button>
+                                </div>
+                              )}
+                              <div className="tp-row2">
+                                <Field label={pArr.length > 1 ? `시작일 (${pIdx + 1})` : "근무 시작일"}>
+                                  <input
+                                    type="date"
+                                    max="9999-12-31"
+                                    value={p.start || ""}
+                                    onChange={(e) => updateBonusPeriod(b.id, pIdx, { start: e.target.value })}
+                                  />
+                                </Field>
+                                <Field label={pArr.length > 1 ? `종료일 (${pIdx + 1})` : "근무 종료일"}>
+                                  <input
+                                    type="date"
+                                    max="9999-12-31"
+                                    value={p.end || ""}
+                                    onChange={(e) => updateBonusPeriod(b.id, pIdx, { end: e.target.value })}
+                                  />
+                                </Field>
+                              </div>
+                            </div>
+                          ))}
+                          <div style={{ marginBottom: "8px", marginTop: "2px" }}>
+                            <button
+                              type="button"
+                              className="tp-preset-chip"
+                              style={{
+                                margin: 0,
+                                padding: "4px 10px",
+                                fontSize: "11.5px",
+                                height: "auto",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                border: "1px dashed #2563eb",
+                                color: "#2563eb",
+                                background: "#eff6ff",
+                                cursor: "pointer",
+                              }}
+                              onClick={() => addBonusPeriod(b.id)}
+                            >
+                              <Plus size={12} /> 단절 기간 추가
+                            </button>
                           </div>
                           <div className="tp-row2">
                             <Field label="연 평정점">
@@ -1707,6 +1881,11 @@
                               <input type="text" disabled value={fmt(b.parsedScore)} />
                             </Field>
                           </div>
+                          {b.hasAnyValid && (
+                            <span className="tp-score-pill" style={{ marginBottom: "8px", display: "inline-block" }}>
+                              총 합산: {b.years > 0 ? `${b.years}년 ` : ""}{b.months}월 · 평정점 {fmt(b.parsedScore)}점
+                            </span>
+                          )}
                         </>
                       ) : (
                         <div className="tp-row2">
@@ -1808,6 +1987,11 @@
                       ) : (
                         <Field label="종별">
                           <input type="text" value={b.type} onChange={(e) => updateBonus(b.id, { type: e.target.value })} />
+                          {isResSchool && (
+                            <span className="tp-hint" style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px", display: "block" }}>
+                              - 연구학교 가산점: 연 0.375점 (1.0점 한)
+                            </span>
+                          )}
                           {b.type && b.type.includes("장기근속") && (
                             <span className="tp-hint" style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "4px", display: "block" }}>
                               - 장기근속 가산점은 3,4지구만 해당함.(속초,동해 제외)
@@ -2090,10 +2274,10 @@
                               가산점<br />(감점)<br />평정
                             </td>
                           )}
-                          <td className="tp-val">{left?.date || ""}</td>
+                          <td className="tp-val" style={{ whiteSpace: "pre-line", fontSize: left?.date && left.date.includes("\n") ? "10px" : undefined, lineHeight: "1.25" }}>{left?.date || ""}</td>
                           <td className="tp-val" style={{ textAlign: "left", paddingLeft: "6px" }}>{left?.type || ""}</td>
                           <td className="tp-val">{left ? fmt(left.score) : ""}</td>
-                          <td className="tp-val">{right?.date || ""}</td>
+                          <td className="tp-val" style={{ whiteSpace: "pre-line", fontSize: right?.date && right.date.includes("\n") ? "10px" : undefined, lineHeight: "1.25" }}>{right?.date || ""}</td>
                           <td className="tp-val" style={{ textAlign: "left", paddingLeft: "6px" }}>{right?.type || ""}</td>
                           <td className="tp-val">{right ? fmt(right.score) : ""}</td>
                           {r === 0 && (
